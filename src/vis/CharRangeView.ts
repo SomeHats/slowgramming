@@ -1,5 +1,5 @@
-import { CHAR_WIDTH_EM } from './config';
-import * as animate from './animate';
+import { CHAR_WIDTH_EM } from '../config';
+import * as animate from '../lib/animate';
 
 export default class CharRangeView {
   public el: HTMLDivElement = document.createElement('div');
@@ -88,7 +88,6 @@ export default class CharRangeView {
       } as any,
       options,
     );
-    console.log(animation.finished);
     await animate.finish(animation);
   }
 }

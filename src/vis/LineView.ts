@@ -1,6 +1,6 @@
 import CharRangeView from './CharRangeView';
-import * as animate from './animate';
-import { CHAR_WIDTH_EM, CHAR_HEIGHT_EM } from './config';
+import * as animate from '../lib/animate';
+import { CHAR_WIDTH_EM, CHAR_HEIGHT_EM } from '../config';
 
 export default class LineView {
   public el: HTMLDivElement = document.createElement('div');
@@ -9,8 +9,7 @@ export default class LineView {
   private content: string;
 
   constructor(lineIdx: number, content: string) {
-    this.el.className = 'absolute pin mx-4';
-    this.el.style.lineHeight = `${CHAR_HEIGHT_EM}em`;
+    this.el.className = 'absolute pin-x pin-top mx-4';
     this.lineIdx = lineIdx;
     this.content = content;
 
@@ -39,7 +38,6 @@ export default class LineView {
     options: KeyframeAnimationOptions,
   ): Promise<void> {
     const translate = `translate(${startIdx * CHAR_WIDTH_EM}em)`;
-    console.log({ startIdx, initialLength, endLength, color, options });
 
     const el = document.createElement('div');
     el.className = `absolute z-20 transition bg-${color}`;
