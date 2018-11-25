@@ -6,7 +6,22 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script src="main.tsx"></script>
+    <div id="root">
+      <div class="flex overflow-hidden rounded bg-grey-lightest m-4">
+        <div
+          class="flex-none bg-grey-lighter p-4 pr-2 text-right"
+          id="lineNumbers"
+        >
+          <div class="font-mono text-grey m-r-4">1</div>
+          <div class="font-mono text-grey m-r-4">2</div>
+          <div class="font-mono text-grey m-r-4">3</div>
+          <div class="font-mono text-grey m-r-4">4</div>
+        </div>
+        <div class="p-4 flex-auto relative">
+          <div class="absolute pin my-4" id="lineContent"></div>
+        </div>
+      </div>
+    </div>
+    <script src="main.ts"></script>
   </body>
 </html>
