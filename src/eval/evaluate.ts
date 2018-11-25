@@ -1,9 +1,11 @@
 import * as ESTree from 'estree';
 import * as JS from './JS';
 import { spawnUnknownSwitchCaseError, assertExists } from '../lib/util';
+import { OffsetRange } from '../types';
 
 interface Visualizer {
-  replaceRange(range: [number, number], newContent: string): Promise<void>;
+  replaceRange(range: OffsetRange, newContent: string): Promise<void>;
+  stringConcatenate(rangeA: OffsetRange, rangeB: OffsetRange): Promise<void>;
 }
 
 interface EvalContext {
@@ -16,15 +18,16 @@ const evaluateLiteral = async (
   node: ESTree.Literal,
   ctx: EvalContext,
 ): Promise<JS.LanguageValue> => {
-  if (node.value === null) return new JS.NullValue();
+  const sourceRange = assertExists(node.range);
+  if (node.value === null) return new JS.NullValue(sourceRange);
 
   switch (typeof node.value) {
     case 'boolean':
-      return new JS.BooleanValue(node.value);
+      return new JS.BooleanValue(node.value, sourceRange);
     case 'number':
-      return new JS.NumberValue(node.value);
+      return new JS.NumberValue(node.value, sourceRange);
     case 'string':
-      return new JS.StringValue(node.value);
+      return new JS.StringValue(node.value, sourceRange);
     default:
       throw new Error(`Unknown literal type: ${typeof node.type}`);
   }
@@ -91,10 +94,11 @@ const evaluateAdditionOperator = async (
     // 7.c.
     // TODO: animated string concatination
     if (lStr instanceof JS.StringValue && rStr instanceof JS.StringValue) {
-      const result = new JS.StringValue(lStr.value + rStr.value);
-      await ctx.visualizer.replaceRange(
-        assertExists(node.range),
-        `'${result.value}'`,
+      const sourceRange = assertExists(node.range);
+      const result = new JS.StringValue(lStr.value + rStr.value, sourceRange);
+      await ctx.visualizer.stringConcatenate(
+        assertExists(lStr.sourceRange),
+        assertExists(rStr.sourceRange),
       );
       return result;
     } else {
@@ -118,11 +122,9 @@ const evaluateAdditionOperator = async (
 
   // 10.
   if (lNum instanceof JS.NumberValue && rNum instanceof JS.NumberValue) {
-    const result = new JS.NumberValue(lNum.value + rNum.value);
-    await ctx.visualizer.replaceRange(
-      assertExists(node.range),
-      String(result.value),
-    );
+    const sourceRange = assertExists(node.range);
+    const result = new JS.NumberValue(lNum.value + rNum.value, sourceRange);
+    await ctx.visualizer.replaceRange(sourceRange, String(result.value));
     return result;
   } else {
     throw new Error('lNum and rNum must be number');
@@ -170,7 +172,7 @@ const evaluateProgram = async (
     }
   }
 
-  return result ? result : JS.normalCompletion(new JS.UndefinedValue());
+  return result ? result : JS.normalCompletion(new JS.UndefinedValue(null), null);
 };
 
 const evaluate = async (

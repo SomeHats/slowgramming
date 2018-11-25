@@ -15,15 +15,13 @@ interface InsertModification {
 interface RemoveModification {
   type: ModificationType.Remove;
   startPosition: Position;
+  endPosition: Position;
   removed: string;
 }
 
 export type Modification = InsertModification | RemoveModification;
 
-export const insert = (
-  startPosition: Position,
-  inserted: string,
-): InsertModification => ({
+export const insert = (startPosition: Position, inserted: string): InsertModification => ({
   type: ModificationType.Insert,
   startPosition,
   inserted,
@@ -31,10 +29,12 @@ export const insert = (
 
 export const remove = (
   startPosition: Position,
+  endPosition: Position,
   removed: string,
 ): RemoveModification => ({
   type: ModificationType.Remove,
   startPosition,
+  endPosition,
   removed,
 });
 
@@ -43,11 +43,7 @@ const applyInsertModification = (
   { startPosition, inserted }: InsertModification,
 ): Position => {
   let { offset, line, column } = position;
-  const {
-    offset: modStartOffset,
-    line: modStartLine,
-    column: modStartCol,
-  } = startPosition;
+  const { offset: modStartOffset, line: modStartLine, column: modStartCol } = startPosition;
 
   // modification doesn't apply if it comes later
   // in the string than this position
@@ -81,41 +77,14 @@ const applyInsertModification = (
   return new Position(offset, line, column);
 };
 
-const getRemoveModificationEndPosition = ({
-  startPosition,
-  removed,
-}: RemoveModification): Position => {
-  let { offset, line, column } = startPosition;
-
-  offset += removed.length;
-  for (let i = 0; i < removed.length; i++) {
-    if (removed[i] === '\n') {
-      line++;
-      column = 0;
-    } else {
-      column++;
-    }
-  }
-
-  return new Position(offset, line, column);
-};
-
 const applyRemoveModification = (
   position: Position,
   modification: RemoveModification,
 ): Position => {
-  const { startPosition, removed } = modification;
+  const { startPosition, endPosition, removed } = modification;
   let { offset, line, column } = position;
-  const {
-    offset: modStartOffset,
-    line: modStartLine,
-    column: modStartCol,
-  } = startPosition;
-  const {
-    offset: modEndOffset,
-    line: modEndLine,
-    column: modEndCol,
-  } = getRemoveModificationEndPosition(modification);
+  const { offset: modStartOffset, line: modStartLine, column: modStartCol } = startPosition;
+  const { offset: modEndOffset, line: modEndLine, column: modEndCol } = endPosition;
 
   // modification doesn't apply if it comes later
   // in the string than this position
@@ -144,10 +113,7 @@ const applyRemoveModification = (
   return new Position(offset, line, column);
 };
 
-export const applyModification = (
-  position: Position,
-  modification: Modification,
-): Position => {
+export const applyModification = (position: Position, modification: Modification): Position => {
   switch (modification.type) {
     case ModificationType.Insert:
       return applyInsertModification(position, modification);

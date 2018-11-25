@@ -49,10 +49,7 @@ export default class LineView {
     await animate.finish(
       el.animate(
         {
-          transform: [
-            `${translate} scaleX(${initialLength})`,
-            `${translate} scaleX(${endLength})`,
-          ],
+          transform: [`${translate} scaleX(${initialLength})`, `${translate} scaleX(${endLength})`],
           opacity: [0, 1, 1, 1, 0],
         } as any,
         options,
@@ -62,12 +59,37 @@ export default class LineView {
     this.el.removeChild(el);
   }
 
-  async replaceRangeAnimated(
-    startIdx: number,
-    endIdx: number,
-    value: string,
-    duration: number,
-  ) {
+  async removeRangeAnimated(startIdx: number, endIdx: number, duration: number) {
+    this.el.removeChild(this.contentView.el);
+
+    const before = this.content.slice(0, startIdx);
+    const content = this.content.slice(startIdx, endIdx);
+    const after = this.content.slice(endIdx);
+
+    const beforeView = new CharRangeView(before, 0);
+    const contentView = new CharRangeView(content, startIdx);
+    const afterView = new CharRangeView(after, endIdx);
+
+    this.el.appendChild(beforeView.el);
+    this.el.appendChild(contentView.el);
+    this.el.appendChild(afterView.el);
+
+    await Promise.all([
+      contentView.scaleToLengthAnimated(0, animate.options(duration)),
+      contentView.fadeOut(animate.options(duration * 0.6)),
+      afterView.setColIdxAnimated(startIdx, animate.options(duration)),
+    ]);
+
+    this.el.removeChild(beforeView.el);
+    this.el.removeChild(contentView.el);
+    this.el.removeChild(afterView.el);
+
+    this.content = `${before}${after}`;
+    this.contentView.setContent(this.content);
+    this.el.appendChild(this.contentView.el);
+  }
+
+  async replaceRangeAnimated(startIdx: number, endIdx: number, value: string, duration: number) {
     this.el.removeChild(this.contentView.el);
 
     const before = this.content.slice(0, startIdx);
@@ -85,27 +107,18 @@ export default class LineView {
     this.el.appendChild(afterView.el);
 
     await Promise.all([
-      contentView.scaleToLengthAnimated(
-        value.length,
-        animate.options(duration),
-      ),
+      contentView.scaleToLengthAnimated(value.length, animate.options(duration)),
       contentView.fadeOut(animate.options(duration * 0.6)),
-      newContentView.scaleFromLengthAnimated(
-        content.length,
-        animate.options(duration),
-      ),
+      newContentView.scaleFromLengthAnimated(content.length, animate.options(duration)),
       newContentView.fadeIn(animate.options(duration, 0.4)),
-      afterView.setColIdxAnimated(
-        startIdx + value.length,
-        animate.options(duration),
-      ),
-      this.showTransformHighlight(
-        startIdx,
-        endIdx - startIdx,
-        value.length,
-        'blue-lighter',
-        animate.options(duration),
-      ),
+      afterView.setColIdxAnimated(startIdx + value.length, animate.options(duration)),
+      // this.showTransformHighlight(
+      //   startIdx,
+      //   endIdx - startIdx,
+      //   value.length,
+      //   'blue-lighter',
+      //   animate.options(duration),
+      // ),
     ]);
 
     this.el.removeChild(beforeView.el);

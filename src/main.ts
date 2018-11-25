@@ -10,7 +10,7 @@ const source = `
 'hello ' + 123
 `.trim();
 
-const slowgramming = new Slowgramming(source, 500);
+const slowgramming = new Slowgramming(source, 800);
 const root = assertExists(document.getElementById('root'));
 slowgramming.appendTo(root);
 (window as any).slowgramming = slowgramming;

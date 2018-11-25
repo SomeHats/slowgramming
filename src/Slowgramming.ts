@@ -6,6 +6,7 @@ import { CHAR_HEIGHT_EM } from './config';
 import evaluate from './eval/evaluate';
 import SourcePositionTracker from './lib/SourcePositionTracker';
 import { delay } from './lib/util';
+import { OffsetRange } from './types';
 
 interface SlowgrammingDom {
   container: HTMLDivElement;
@@ -47,7 +48,7 @@ const createLineNumberDom = (n: number): HTMLDivElement => {
 };
 
 export default class Slowgramming {
-  private readonly lines: Array<LineView>;
+  public readonly lines: Array<LineView>;
   private readonly dom: SlowgrammingDom;
   private readonly speed: number;
   private readonly ast: ESTree.Program;
@@ -80,36 +81,58 @@ export default class Slowgramming {
   }
 
   public async go() {
-    await evaluate(this.ast, {
-      visualizer: {
-        replaceRange: async (range: [number, number], newContent: string) => {
-          const startPosition = this.sourcePositions.fromOriginalOffset(
-            range[0],
-          );
-          const endPosition = this.sourcePositions.fromOriginalOffset(range[1]);
-          assert.equal(
-            startPosition.line,
-            endPosition.line,
-            'range must be contained within a single line',
-          );
+    const visualizer = {
+      replaceRange: async (range: OffsetRange, newContent: string) => {
+        const startPosition = this.sourcePositions.fromOriginalOffset(range[0]);
+        const endPosition = this.sourcePositions.fromOriginalOffset(range[1]);
+        assert.equal(
+          startPosition.line,
+          endPosition.line,
+          'range must be contained within a single line',
+        );
 
-          this.sourcePositions.remove(
-            startPosition,
-            endPosition.offset - startPosition.offset,
-          );
-          this.sourcePositions.insert(startPosition, newContent);
+        this.sourcePositions.remove(startPosition.offset, endPosition.offset);
+        if (newContent.length) {
+          this.sourcePositions.insert(startPosition.offset, newContent);
+        }
 
-          const line = this.lines[startPosition.line];
-          await line.replaceRangeAnimated(
-            startPosition.column,
-            endPosition.column,
-            newContent,
-            this.speed,
-          );
+        const line = this.lines[startPosition.line];
+        await line.replaceRangeAnimated(
+          startPosition.column,
+          endPosition.column,
+          newContent,
+          this.speed,
+        );
 
-          await delay(this.speed * 0.5);
-        },
+        await delay(this.speed * 0.5);
       },
+
+      stringConcatenate: async (stringARange: OffsetRange, stringBRange: OffsetRange) => {
+        const stringAStartPosition = this.sourcePositions.fromOriginalOffset(stringARange[0]);
+        const stringAEndPosition = this.sourcePositions.fromOriginalOffset(stringARange[1]);
+        const stringBStartPosition = this.sourcePositions.fromOriginalOffset(stringBRange[0]);
+        const stringBEndPosition = this.sourcePositions.fromOriginalOffset(stringBRange[1]);
+        assert.equal(
+          stringAStartPosition.line,
+          stringBEndPosition.line,
+          'strings must be on same line',
+        );
+
+        this.sourcePositions.remove(stringAEndPosition.offset - 1, stringBStartPosition.offset + 1);
+
+        const line = this.lines[stringAStartPosition.line];
+        await line.removeRangeAnimated(
+          stringAEndPosition.column - 1,
+          stringBStartPosition.column + 1,
+          this.speed,
+        );
+
+        await delay(this.speed * 0.5);
+      },
+    };
+
+    await evaluate(this.ast, {
+      visualizer,
     });
   }
 }

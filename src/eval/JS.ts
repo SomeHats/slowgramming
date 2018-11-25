@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import { crash } from '../lib/util';
+import { OffsetRange } from '../types';
 
 // #5.2.3.4 ReturnIfAbrubt shorthands
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-returnifabrupt-shorthands
@@ -45,8 +46,10 @@ export const isEmpty = (value: any): value is Empty => {
 
 export class BaseValue<Type extends string> {
   public readonly valueType: Type;
-  public constructor(type: Type) {
+  public readonly sourceRange: OffsetRange | null;
+  public constructor(type: Type, sourceRange: OffsetRange | null) {
     this.valueType = type;
+    this.sourceRange = sourceRange || null;
   }
 }
 
@@ -54,8 +57,8 @@ export class BaseValue<Type extends string> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types-undefined-type
 export class UndefinedValue extends BaseValue<'Undefined'> {
   public readonly value: undefined = undefined;
-  public constructor() {
-    super('Undefined');
+  public constructor(sourceRange: OffsetRange | null) {
+    super('Undefined', sourceRange);
   }
 }
 
@@ -63,8 +66,8 @@ export class UndefinedValue extends BaseValue<'Undefined'> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types-null-type
 export class NullValue extends BaseValue<'Null'> {
   public readonly value: null = null;
-  public constructor() {
-    super('Null');
+  public constructor(sourceRange: OffsetRange | null) {
+    super('Null', sourceRange);
   }
 }
 
@@ -72,8 +75,8 @@ export class NullValue extends BaseValue<'Null'> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types-boolean-type
 export class BooleanValue extends BaseValue<'Boolean'> {
   public readonly value: boolean;
-  public constructor(value: boolean) {
-    super('Boolean');
+  public constructor(value: boolean, sourceRange: OffsetRange | null) {
+    super('Boolean', sourceRange);
     this.value = value;
   }
 }
@@ -82,8 +85,8 @@ export class BooleanValue extends BaseValue<'Boolean'> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types-string-type
 export class StringValue extends BaseValue<'String'> {
   public readonly value: string;
-  public constructor(value: string) {
-    super('String');
+  public constructor(value: string, sourceRange: OffsetRange | null) {
+    super('String', sourceRange);
     this.value = value;
   }
 }
@@ -92,8 +95,8 @@ export class StringValue extends BaseValue<'String'> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types-symbol-type
 export class SymbolValue extends BaseValue<'Symbol'> {
   public readonly value: symbol;
-  public constructor(value: symbol) {
-    super('Symbol');
+  public constructor(value: symbol, sourceRange: OffsetRange | null) {
+    super('Symbol', sourceRange);
     this.value = value;
   }
 }
@@ -106,8 +109,8 @@ export class SymbolValue extends BaseValue<'Symbol'> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types-number-type
 export class NumberValue extends BaseValue<'Number'> {
   public readonly value: number;
-  public constructor(value: number) {
-    super('Number');
+  public constructor(value: number, sourceRange: OffsetRange | null) {
+    super('Number', sourceRange);
     this.value = value;
   }
 }
@@ -116,8 +119,8 @@ export class NumberValue extends BaseValue<'Number'> {
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-object-type
 export class ObjectValue extends BaseValue<'Object'> {
   public readonly value: symbol;
-  public constructor() {
-    super('Object');
+  public constructor(sourceRange: OffsetRange | null) {
+    super('Object', sourceRange);
 
     // TODO: implement objects
     throw new Error('Objects are not implemented');
@@ -127,15 +130,15 @@ export class ObjectValue extends BaseValue<'Object'> {
 // #6.2.1 The List and Record Specification Types
 export class List<T> extends BaseValue<'List'> {
   public readonly items: Array<T>;
-  public constructor(...items: Array<T>) {
-    super('List');
+  public constructor(items: Array<T>, sourceRange: OffsetRange | null) {
+    super('List', sourceRange);
     this.items = items;
   }
 }
 
 export class Record<Type extends string> extends BaseValue<Type> {
-  public constructor(type: Type) {
-    super(type);
+  public constructor(type: Type, sourceRange: OffsetRange | null) {
+    super(type, sourceRange);
   }
 }
 
@@ -147,16 +150,22 @@ export class Completion extends Record<'Completion'> {
   public readonly value: LanguageValue | Empty;
   public readonly target: string | Empty;
 
-  public static fromCompletion({ type, value, target }: Completion) {
-    return new Completion(type, value, target);
+  public static fromCompletion({
+    type,
+    value,
+    target,
+    sourceRange,
+  }: Completion) {
+    return new Completion(type, value, target, sourceRange);
   }
 
   public constructor(
     type: CompletionType,
     value: LanguageValue | Empty,
     target: string | Empty,
+    sourceRange: OffsetRange | null,
   ) {
-    super('Completion');
+    super('Completion', sourceRange);
     this.type = type;
     this.value = value;
     this.target = target;
@@ -177,14 +186,20 @@ export class Completion extends Record<'Completion'> {
 
 // #6.2.3.2 NormalCompletion
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-normalcompletion
-export const normalCompletion = (value: LanguageValue | Empty): Completion => {
-  return new Completion('normal', value, empty);
+export const normalCompletion = (
+  value: LanguageValue | Empty,
+  sourceRange: OffsetRange | null,
+): Completion => {
+  return new Completion('normal', value, empty, sourceRange);
 };
 
 // #6.2.3.3 ThrowCompletion
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-throwcompletion
-export const throwCompletion = (value: LanguageValue | Empty): Completion => {
-  return new Completion('throw', value, empty);
+export const throwCompletion = (
+  value: LanguageValue | Empty,
+  sourceRange: OffsetRange | null,
+): Completion => {
+  return new Completion('throw', value, empty, sourceRange);
 };
 
 // #6.2.3.4 UpdateEmpty
@@ -204,7 +219,12 @@ export const updateEmpty = (
   }
 
   // 3.
-  return new Completion(completionRecord.type, value, completionRecord.target);
+  return new Completion(
+    completionRecord.type,
+    value,
+    completionRecord.target,
+    completionRecord.sourceRange,
+  );
 };
 
 // #6.2.4 The Reference Specification Type
@@ -225,8 +245,9 @@ export class Reference extends Record<'Reference'> {
     baseValue: ReferenceBaseValue,
     referencedName: StringValue | SymbolValue,
     strictReference: boolean,
+    sourceRange: OffsetRange | null,
   ) {
-    super('Reference');
+    super('Reference', sourceRange);
     this.baseValue = baseValue;
     this.referencedName = referencedName;
     this.isStrict = strictReference;
@@ -378,15 +399,15 @@ export const toPrimitive = (input: LanguageValue, preferredType?: string) => {
 export const toNumber = (input: LanguageValue): LanguageValue | Completion => {
   switch (input.valueType) {
     case 'Undefined':
-      return new NumberValue(NaN);
+      return new NumberValue(NaN, input.sourceRange);
     case 'Null':
-      return new NumberValue(+0);
+      return new NumberValue(+0, input.sourceRange);
     case 'Boolean':
-      return new NumberValue(input.value ? 1 : +0);
+      return new NumberValue(input.value ? 1 : +0, input.sourceRange);
     case 'Number':
       return input;
     case 'String':
-      return new NumberValue(Number(input.value));
+      return new NumberValue(Number(input.value), input.sourceRange);
     case 'Symbol':
       // TODO: return a throw completion instead
       throw new TypeError('Cannot convert a Symbol value to a number');
@@ -413,13 +434,13 @@ export const toNumber = (input: LanguageValue): LanguageValue | Completion => {
 export const toString = (input: LanguageValue): LanguageValue | Completion => {
   switch (input.valueType) {
     case 'Undefined':
-      return new StringValue('undefined');
+      return new StringValue('undefined', input.sourceRange);
     case 'Null':
-      return new StringValue('null');
+      return new StringValue('null', input.sourceRange);
     case 'Boolean':
-      return new StringValue(input.value ? 'true' : 'false');
+      return new StringValue(input.value ? 'true' : 'false', input.sourceRange);
     case 'Number':
-      return new StringValue(input.value.toString());
+      return new StringValue(input.value.toString(), input.sourceRange);
     case 'String':
       return input;
     case 'Symbol':

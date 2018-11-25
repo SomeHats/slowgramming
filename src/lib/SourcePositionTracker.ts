@@ -36,47 +36,55 @@ export default class SourcePositionTracker {
     assert(offset >= 0, 'offset must be positive');
     assert(
       offset < this.originalLength,
-      `offset (${offset}) must be less than source length (${
-        this.originalLength
-      })`,
+      `offset (${offset}) must be less than source length (${this.originalLength})`,
     );
 
     return this.applyModifications(this.positionByOffset[offset]);
   }
 
-  public insert(startPosition: Position, inserted: string) {
-    this.modifications.push(
-      StringModifications.insert(startPosition, inserted),
-    );
+  public fromModifiedOffset(offset: number): Position {
+    let line = 0;
+    let column = 0;
+    for (let i = 0; i < offset; i++) {
+      if (this.transformedSource[i] === '\n') {
+        line++;
+        column = 0;
+      } else {
+        column++;
+      }
+    }
+    return new Position(offset, line, column);
+  }
+
+  public insert(startOffset: number, inserted: string) {
+    const startPosition = this.fromModifiedOffset(startOffset);
+    this.modifications.push(StringModifications.insert(startPosition, inserted));
 
     this.transformedSource = [
-      this.transformedSource.slice(0, startPosition.offset),
+      this.transformedSource.slice(0, startOffset),
       inserted,
-      this.transformedSource.slice(startPosition.offset),
+      this.transformedSource.slice(startOffset),
     ].join('');
   }
 
-  public remove(startPosition: Position, length: number) {
-    const removed = this.transformedSource.slice(
-      startPosition.offset,
-      startPosition.offset + length,
-    );
+  public remove(startOffset: number, endOffset: number) {
+    const startPosition = this.fromModifiedOffset(startOffset);
+    const endPosition = this.fromModifiedOffset(endOffset);
 
-    this.modifications.push(StringModifications.remove(startPosition, removed));
+    const removed = this.transformedSource.slice(startOffset, endOffset);
+
+    this.modifications.push(StringModifications.remove(startPosition, endPosition, removed));
 
     this.transformedSource = [
-      this.transformedSource.slice(0, startPosition.offset),
-      this.transformedSource.slice(startPosition.offset + length),
+      this.transformedSource.slice(0, startOffset),
+      this.transformedSource.slice(endOffset),
     ].join('');
   }
 
   private applyModifications(position: Position): Position {
     return this.modifications.reduce(
       (transformedPosition, modification) =>
-        StringModifications.applyModification(
-          transformedPosition,
-          modification,
-        ),
+        StringModifications.applyModification(transformedPosition, modification),
       position,
     );
   }
