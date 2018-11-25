@@ -1,5 +1,5 @@
 import Position from './Position';
-import { spawnUnknownSwitchCaseError, crash } from './util';
+import { spawnUnknownSwitchCaseError } from './util';
 
 enum ModificationType {
   Remove = 'remove',

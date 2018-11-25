@@ -6,7 +6,6 @@ import { CHAR_HEIGHT_EM } from './config';
 import evaluate from './eval/evaluate';
 import SourcePositionTracker from './lib/SourcePositionTracker';
 import { delay } from './lib/util';
-import { start } from 'repl';
 
 interface SlowgrammingDom {
   container: HTMLDivElement;
@@ -48,7 +47,6 @@ const createLineNumberDom = (n: number): HTMLDivElement => {
 };
 
 export default class Slowgramming {
-  private readonly source: string;
   private readonly lines: Array<LineView>;
   private readonly dom: SlowgrammingDom;
   private readonly speed: number;
@@ -57,7 +55,6 @@ export default class Slowgramming {
 
   constructor(source: string, speed: number = 1000) {
     this.dom = createBlankDom();
-    this.source = source;
     this.lines = source.split('\n').map((line, i) => new LineView(i, line));
     this.lines.forEach((line, i) => {
       line.appendTo(this.dom.lineContent);
