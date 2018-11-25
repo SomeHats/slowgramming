@@ -89,7 +89,13 @@ export default class LineView {
     this.el.appendChild(this.contentView.el);
   }
 
-  async replaceRangeAnimated(startIdx: number, endIdx: number, value: string, duration: number) {
+  async replaceRangeAnimated(
+    startIdx: number,
+    endIdx: number,
+    value: string,
+    duration: number,
+    { highlight }: { highlight?: boolean } = {},
+  ) {
     this.el.removeChild(this.contentView.el);
 
     const before = this.content.slice(0, startIdx);
@@ -112,13 +118,15 @@ export default class LineView {
       newContentView.scaleFromLengthAnimated(content.length, animate.options(duration)),
       newContentView.fadeIn(animate.options(duration, 0.4)),
       afterView.setColIdxAnimated(startIdx + value.length, animate.options(duration)),
-      // this.showTransformHighlight(
-      //   startIdx,
-      //   endIdx - startIdx,
-      //   value.length,
-      //   'blue-lighter',
-      //   animate.options(duration),
-      // ),
+      highlight
+        ? this.showTransformHighlight(
+            startIdx,
+            endIdx - startIdx,
+            value.length,
+            'blue-lighter',
+            animate.options(duration),
+          )
+        : Promise.resolve(),
     ]);
 
     this.el.removeChild(beforeView.el);

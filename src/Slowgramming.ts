@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as ESTree from 'estree';
 import * as esprima from 'esprima';
+import * as animate from './lib/animate';
 import LineView from './vis/LineView';
 import { CHAR_HEIGHT_EM } from './config';
 import evaluate from './eval/evaluate';
@@ -102,6 +103,7 @@ export default class Slowgramming {
           endPosition.column,
           newContent,
           this.speed,
+          { highlight: true },
         );
 
         await delay(this.speed * 0.5);
@@ -118,14 +120,27 @@ export default class Slowgramming {
           'strings must be on same line',
         );
 
+        const initalLength = stringBEndPosition.column - stringAStartPosition.column;
+        const removeStart = stringAEndPosition.offset - 1;
+        const removeEnd = stringBStartPosition.offset + 1;
+        const removedLength = removeEnd - removeStart;
         this.sourcePositions.remove(stringAEndPosition.offset - 1, stringBStartPosition.offset + 1);
 
         const line = this.lines[stringAStartPosition.line];
-        await line.removeRangeAnimated(
-          stringAEndPosition.column - 1,
-          stringBStartPosition.column + 1,
-          this.speed,
-        );
+        await Promise.all([
+          line.removeRangeAnimated(
+            stringAEndPosition.column - 1,
+            stringBStartPosition.column + 1,
+            this.speed,
+          ),
+          line.showTransformHighlight(
+            stringAStartPosition.column,
+            initalLength,
+            initalLength - removedLength,
+            'blue-lighter',
+            animate.options(this.speed),
+          ),
+        ]);
 
         await delay(this.speed * 0.5);
       },
