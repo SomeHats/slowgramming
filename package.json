@@ -5,18 +5,16 @@
   "main": "index.js",
   "scripts": {
     "test": "tsc",
-    "start": "parcel src/index.html src/other/index.html"
+    "start": "parcel src/index.html",
+    "build": "parcel build src/index.html --out-dir dist --public-url https://alex.dytry.ch/slowgramming/"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/acorn": "^4.0.3",
     "@types/esprima": "^4.0.2",
     "@types/estree": "0.0.39",
     "@types/lodash": "^4.14.118",
-    "@types/react": "^16.7.3",
-    "@types/react-dom": "^16.0.9",
     "autoprefixer": "^9.3.1",
     "parcel-bundler": "^1.10.3",
     "postcss": "^7.0.5",
@@ -24,14 +22,8 @@
     "typescript": "^3.1.6"
   },
   "dependencies": {
-    "acorn": "^6.0.4",
-    "classnames": "^2.2.6",
     "esprima": "^4.0.1",
     "lodash": "^4.17.11",
-    "mobx": "^5.6.0",
-    "mobx-react": "^5.3.6",
-    "react": "^16.6.1",
-    "react-dom": "^16.6.1",
     "web-animations-js": "^2.3.1"
   },
   "browserslist": [
