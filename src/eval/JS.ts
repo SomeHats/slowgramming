@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { crash } from '../lib/util';
+import { crash, isNegativeZero, isPositiveZero } from '../lib/util';
 import { OffsetRange } from '../types';
 
 // #5.2.3.4 ReturnIfAbrubt shorthands
@@ -22,8 +22,7 @@ export const assertNotAbrubt = (value: Value): Value => {
 // #6.1 ECMAScript Language Types
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-types
 
-export const type = <T extends string>(value: BaseValue<T>): T =>
-  value.valueType;
+export const type = <T extends string>(value: BaseValue<T>): T => value.valueType;
 
 export type LanguageValue =
   | UndefinedValue
@@ -150,12 +149,7 @@ export class Completion extends Record<'Completion'> {
   public readonly value: LanguageValue | Empty;
   public readonly target: string | Empty;
 
-  public static fromCompletion({
-    type,
-    value,
-    target,
-    sourceRange,
-  }: Completion) {
+  public static fromCompletion({ type, value, target, sourceRange }: Completion) {
     return new Completion(type, value, target, sourceRange);
   }
 
@@ -204,10 +198,7 @@ export const throwCompletion = (
 
 // #6.2.3.4 UpdateEmpty
 // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-updateempty
-export const updateEmpty = (
-  completionRecord: Completion,
-  value: LanguageValue,
-): Completion => {
+export const updateEmpty = (completionRecord: Completion, value: LanguageValue): Completion => {
   // 1.
   if (completionRecord.type === 'return' || completionRecord.type === 'throw') {
     assert(!isEmpty(value), 'value must not be empty');
@@ -469,4 +460,93 @@ export const toString = (input: LanguageValue): LanguageValue | Completion => {
 // TODO: implement this
 export const toObject = (input: LanguageValue): ObjectValue => {
   throw new Error('ToObject is not yet implemented');
+};
+
+// #7.2.10 SameValue
+// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-samevalue
+export const sameValue = (x: LanguageValue, y: LanguageValue): boolean => {
+  // 1.
+  if (type(x) !== type(y)) return false;
+
+  // 2.
+  if (type(x) === 'Number') {
+    if (!(x instanceof NumberValue)) return crash('x must be number');
+    if (!(y instanceof NumberValue)) return crash('y must be number');
+
+    // 2.a
+    if (isNaN(x.value) && isNaN(y.value)) return true;
+
+    // 2.b
+    if (isPositiveZero(x.value) && isNegativeZero(y.value)) return false;
+
+    // 2.c
+    if (isNegativeZero(x.value) && isPositiveZero(y.value)) return false;
+
+    // 2.d
+    if (x.value === y.value) return true;
+
+    // 2.e
+    return false;
+  }
+
+  return sameValueNonNumber(x, y);
+};
+
+// #7.2.11 SameValueZero
+// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-samevaluezero
+export const sameValueZero = (x: LanguageValue, y: LanguageValue): boolean => {
+  // 1.
+  if (type(x) !== type(y)) return false;
+
+  // 2.
+  if (type(x) === 'Number') {
+    if (!(x instanceof NumberValue)) return crash('x must be number');
+    if (!(y instanceof NumberValue)) return crash('y must be number');
+
+    // 2.a
+    if (isNaN(x.value) && isNaN(y.value)) return true;
+
+    // 2.b
+    if (isPositiveZero(x.value) && isNegativeZero(y.value)) return true;
+
+    // 2.c
+    if (isNegativeZero(x.value) && isPositiveZero(y.value)) return true;
+
+    // 2.d
+    if (x.value === y.value) return true;
+
+    // 2.e
+    return false;
+  }
+
+  return sameValueNonNumber(x, y);
+};
+
+// #7.2.12 SameValueNonNumber
+// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-samevaluenonnumber
+export const sameValueNonNumber = (x: LanguageValue, y: LanguageValue): boolean => {
+  // 1.
+  if (x instanceof NumberValue) return crash('x must not be number');
+
+  // 2.
+  if (x.valueType !== y.valueType) return crash('x and y must have same type');
+
+  // 3.
+  if (type(x) === 'Undefined') return true;
+
+  // 4.
+  if (type(x) === 'Null') return true;
+
+  // 5.
+  if (type(x) === 'String') return x.value === y.value;
+
+  // 6.
+  if (type(x) === 'Boolean') return x.value === y.value;
+
+  // 7.
+  if (type(x) === 'Symbol') return x.value === y.value;
+
+  // 8.
+  // TODO: objects
+  return crash('objects not yet implemented');
 };
