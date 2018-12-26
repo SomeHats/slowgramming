@@ -1,3 +1,4 @@
+import '@babel/polyfill';
 import 'web-animations-js';
 import Slowgramming from './Slowgramming';
 import { assertExists } from './lib/util';

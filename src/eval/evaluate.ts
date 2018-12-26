@@ -2,6 +2,7 @@ import * as ESTree from 'estree';
 import * as JS from './JS';
 import { spawnUnknownSwitchCaseError, assertExists } from '../lib/util';
 import { OffsetRange } from '../types';
+import returnIfAbrupt from './returnIfAbrupt.macro';
 
 interface Visualizer {
   replaceRange(range: OffsetRange, newContent: string): Promise<void>;
@@ -43,56 +44,29 @@ const evaluateAdditionOperator = async (
   const lRef = await evaluate(node.left, ctx);
 
   // 2.
-  let lVal = JS.getValue(lRef);
-
-  // ReturnIfAbrupt
-  if (lVal instanceof JS.Completion) {
-    if (lVal.isAbrubt) return lVal;
-    lVal = lVal.nonAbrubtValue;
-  }
+  const lVal = returnIfAbrupt(JS.getValue(lRef));
 
   // 3.
   const rRef = await evaluate(node.right, ctx);
 
   // 4.
-  let rVal = JS.getValue(rRef);
-  if (rVal instanceof JS.Completion) {
-    if (rVal.isAbrubt) return rVal;
-    rVal = rVal.nonAbrubtValue;
-  }
+  const rVal = returnIfAbrupt(JS.getValue(rRef));
 
   // 5.
-  let lPrim = JS.toPrimitive(lVal);
-  if (lPrim instanceof JS.Completion) {
-    if (lPrim.isAbrubt) return lPrim;
-    lPrim = lPrim.nonAbrubtValue;
-  }
+  const lPrim = returnIfAbrupt(JS.toPrimitive(lVal));
 
   // 6.
-  let rPrim = JS.toPrimitive(rVal);
-  if (rPrim instanceof JS.Completion) {
-    if (rPrim.isAbrubt) return rPrim;
-    rPrim = rPrim.nonAbrubtValue;
-  }
+  const rPrim = returnIfAbrupt(JS.toPrimitive(rVal));
 
   // 7.
   if (JS.type(lPrim) === 'String' || JS.type(rPrim) === 'String') {
     // 7.a.
-    let lStr = JS.toString(lPrim);
-    if (lStr instanceof JS.Completion) {
-      if (lStr.isAbrubt) return lStr;
-      lStr = lStr.nonAbrubtValue;
-    }
+    const lStr = returnIfAbrupt(JS.toString(lPrim));
 
     // 7.b.
-    let rStr = JS.toString(rPrim);
-    if (rStr instanceof JS.Completion) {
-      if (rStr.isAbrubt) return rStr;
-      rStr = rStr.nonAbrubtValue;
-    }
+    const rStr = returnIfAbrupt(JS.toString(rPrim));
 
     // 7.c.
-    // TODO: animated string concatination
     if (lStr instanceof JS.StringValue && rStr instanceof JS.StringValue) {
       const sourceRange = assertExists(node.range);
       const result = new JS.StringValue(lStr.value + rStr.value, sourceRange);
@@ -107,18 +81,10 @@ const evaluateAdditionOperator = async (
   }
 
   // 8.
-  let lNum = JS.toNumber(lPrim);
-  if (lNum instanceof JS.Completion) {
-    if (lNum.isAbrubt) return lNum;
-    lNum = lNum.nonAbrubtValue;
-  }
+  const lNum = returnIfAbrupt(JS.toNumber(lPrim));
 
   // 9.
-  let rNum = JS.toNumber(rPrim);
-  if (rNum instanceof JS.Completion) {
-    if (rNum.isAbrubt) return rNum;
-    rNum = rNum.nonAbrubtValue;
-  }
+  const rNum = returnIfAbrupt(JS.toNumber(rPrim));
 
   // 10.
   if (lNum instanceof JS.NumberValue && rNum instanceof JS.NumberValue) {
@@ -141,13 +107,7 @@ const evaluateExpressionStatement = async (
   const exprRef = await evaluate(statement.expression, ctx);
 
   // 2.
-  let value = JS.getValue(exprRef);
-
-  // ReturnIfAbrupt
-  if (value instanceof JS.Completion) {
-    if (value.isAbrubt) return value;
-    value = value.nonAbrubtValue;
-  }
+  let value = returnIfAbrupt(JS.getValue(exprRef));
 
   console.log('expression statement', value);
 
@@ -163,13 +123,7 @@ const evaluateProgram = async (
   // TODO hoisting etc
   let result;
   for (const statement of program.body) {
-    result = await evaluate(statement, ctx);
-
-    // ReturnIfAbrupt
-    if (result instanceof JS.Completion) {
-      if (result.isAbrubt) return result;
-      result = result.nonAbrubtValue;
-    }
+    result = returnIfAbrupt(await evaluate(statement, ctx));
   }
 
   return result ? result : JS.normalCompletion(new JS.UndefinedValue(null), null);
